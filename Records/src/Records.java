@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,8 +28,9 @@ public class Records extends Configured implements Tool
         job.setJarByClass(this.getClass());
 
         job.setMapperClass(RecordMapper.class);
-        // job.setCombinerClass(RecordCombiner.class);
-        job.setReducerClass(RecordReducer.class);
+//        job.setCombinerClass(RecordCombiner.class);
+//        job.setReducerClass(RecordReducer.class);
+        job.setReducerClass(RecordCombiner.class);
 
         job.setMapOutputValueClass(Text.class);
         job.setMapOutputKeyClass(Text.class);
@@ -44,17 +46,13 @@ public class Records extends Configured implements Tool
     }
 
     public static class RecordMapper extends Mapper<LongWritable, Text, Text, Text> {
-        private static final Logger logger = Logger.getLogger(RecordMapper.class);
-        @Override
-        protected void setup(Context context) throws IOException, InterruptedException {
-            PropertyConfigurator.configure("log4j.properties");
-            super.setup(context);
-        }
         private Text compositeKey = new Text();
         private Text genreKey = new Text();
 
         public void map(LongWritable offset, Text value, Context context) {
             try {
+                // String line = new String(lineText.getBytes(), 0, lineText.getLength(), StandardCharsets.UTF_8);
+                // "\u0001"
                 String[] columns = value.toString().split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
                 if (columns.length == 13) {
                     String label_id = columns[6];
@@ -68,13 +66,37 @@ public class Records extends Configured implements Tool
                     context.write(compositeKey, genreKey);
                 }
             } catch (Exception e) {
-                logger.error("Error in Mapper:", e);
-                // e.printStackTrace();
+                 e.printStackTrace();
             }
         }
     }
 
     public static class RecordReducer extends Reducer<Text, Text, Text, Text> {
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            int record_count = 0;
+            Set<String> genres = new HashSet<>();
+
+            for (Text value : values) {
+                String[] splitted_value = value.toString().split(",");
+                int cur_record_count = Integer.parseInt(splitted_value[0]);
+                record_count += cur_record_count;
+                genres.addAll(Arrays.asList(splitted_value).subList(1, splitted_value.length));
+            }
+
+            String[] key_split = key.toString().split(",");
+            if (key_split.length == 4) {
+                String label_id = key_split[0], artist_id = key_split[1], artist_name = key_split[2], decade = key_split[3];
+                String genresList = String.join(",", genres);
+
+                String resultKey = label_id + "," + artist_id + "," + artist_name + "," + decade;
+                String resultValue = record_count + "," + genresList;
+
+                context.write(new Text(resultKey), new Text(resultValue));
+            }
+        }
+    }
+
+    public static class RecordCombiner extends Reducer<Text,Text,Text,Text> {
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int record_count = 0;
             Set<String> genres = new HashSet<>();
@@ -87,20 +109,14 @@ public class Records extends Configured implements Tool
             String[] key_split = key.toString().split(",");
             if (key_split.length == 4) {
                 String label_id = key_split[0], artist_id = key_split[1], artist_name = key_split[2], decade = key_split[3];
-                String genresList = "[" + String.join(",", genres) + "]";
+                String genresList = String.join(",", genres);
 
                 String resultKey = label_id + "," + artist_id + "," + artist_name + "," + decade;
-                String resultValue = "," + record_count + "," + genresList;
+                String resultValue = record_count + "," + genresList;
 
                 context.write(new Text(resultKey), new Text(resultValue));
             }
         }
     }
-
-//    TODO: create combiner
-//    public static class RecordCombiner
-//            extends Reducer<Text,IntWritable,Text,IntWritable> {
-//        // ...
-//    }
 
 }
