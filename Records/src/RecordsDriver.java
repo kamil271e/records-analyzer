@@ -1,4 +1,8 @@
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -11,10 +15,12 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+
 
 public class RecordsDriver extends Configured implements Tool
 {
+    static String GENRE_SEPARATOR = "\u0001";
+
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
         int res = ToolRunner.run(new RecordsDriver(), args);
@@ -48,16 +54,16 @@ public class RecordsDriver extends Configured implements Tool
         @Override
         public void map(LongWritable offset, Text line, Context context) {
             try {
-                // String line = new String(lineText.getBytes(), 0, lineText.getLength(), StandardCharsets.UTF_8);
+                String textLine = new String(line.getBytes(), 0, line.getLength(), StandardCharsets.UTF_8);
                 // "\u0001"
-                String[] columns = line.toString().split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+                String[] columns = textLine.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
                 if (columns.length == 13) {
                     int label_id = Integer.parseInt(columns[6]);
                     int artist_id = Integer.parseInt(columns[4]);
                     String artist_name = columns[5];
                     int release_date = Integer.parseInt(columns[11]);
                     int decade = release_date / 10 * 10;
-                    String genre = columns[8];
+                    String genre = columns[8];// + GENRE_SEPARATOR;
 
                     RecordsKey key = new RecordsKey(label_id, artist_id, artist_name, decade);
                     Record record = new Record(1, genre);
@@ -74,13 +80,16 @@ public class RecordsDriver extends Configured implements Tool
     public static class RecordReducer extends Reducer<RecordsKey, Record, RecordsKey, Record> {
         @Override
         public void reduce(RecordsKey key, Iterable<Record> values, Context context) throws IOException, InterruptedException {
-            Logger logger = Logger.getLogger(RecordsDriver.class);
-            logger.info("STARTING REDUCE");
             Record resultRecord = new Record();
+            int albumCount = 0;
+            Set<String> genres = new HashSet<>();
+
             for (Record value : values) {
-                resultRecord.merge(value);
+                albumCount++;
+                genres.addAll(value.genres);
             }
-                context.write(key, resultRecord);
+            resultRecord.merge(albumCount, genres);
+            context.write(key, resultRecord);
             }
         }
 }
