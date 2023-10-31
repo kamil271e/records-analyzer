@@ -28,7 +28,7 @@ public class RecordsDriver extends Configured implements Tool
         job.setJarByClass(this.getClass());
 
         job.setMapperClass(RecordMapper.class);
-//        job.setCombinerClass(RecordReducer.class);
+        job.setCombinerClass(RecordReducer.class);
         job.setReducerClass(RecordReducer.class);
 
         job.setMapOutputKeyClass(RecordsKey.class);
@@ -45,6 +45,7 @@ public class RecordsDriver extends Configured implements Tool
 
     public static class RecordMapper extends Mapper<LongWritable, Text, RecordsKey, Record> {
         Logger logger = Logger.getLogger(RecordsDriver.class);
+        @Override
         public void map(LongWritable offset, Text line, Context context) {
             try {
                 // String line = new String(lineText.getBytes(), 0, lineText.getLength(), StandardCharsets.UTF_8);
@@ -71,6 +72,7 @@ public class RecordsDriver extends Configured implements Tool
     }
 
     public static class RecordReducer extends Reducer<RecordsKey, Record, RecordsKey, Record> {
+        @Override
         public void reduce(RecordsKey key, Iterable<Record> values, Context context) throws IOException, InterruptedException {
             Logger logger = Logger.getLogger(RecordsDriver.class);
             logger.info("STARTING REDUCE");

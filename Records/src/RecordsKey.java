@@ -1,3 +1,4 @@
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
@@ -53,7 +54,7 @@ public class RecordsKey implements WritableComparable<RecordsKey> {
     public void write(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(this.labelId);
         dataOutput.writeInt(this.artistId);
-        dataOutput.writeChars(this.artistName);
+        Text.writeString(dataOutput, this.artistName);
         dataOutput.writeInt(this.decade);
     }
 
@@ -61,12 +62,12 @@ public class RecordsKey implements WritableComparable<RecordsKey> {
     public void readFields(DataInput dataInput) throws IOException {
         this.labelId = dataInput.readInt();
         this.artistId = dataInput.readInt();
-        this.artistName = dataInput.readLine();
+        this.artistName = Text.readString(dataInput);
         this.decade = dataInput.readInt();
     }
 
-//    @Override
-//    public String toString() {
-//        return this.labelId + "," + this.artistId + "," + this.artistName + "," + this.decade;
-//    }
+    @Override
+    public String toString() {
+        return this.labelId + "," + this.artistId + "," + this.artistName + "," + this.decade;
+    }
 }
