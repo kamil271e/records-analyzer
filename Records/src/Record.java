@@ -9,13 +9,10 @@ import java.util.Set;
 
 public class Record implements WritableComparable<Record> {
     IntWritable albumCount;
-    private Set<String> genres;
-    ArrayWritable genresArr;
-
+    Set<String> genres;
     public Record() {
         this.albumCount = new IntWritable(0);
         this.genres = new HashSet<>();
-        this.genresArr = new ArrayWritable(Text.class);
     }
 
     public Record(int albumCount, String genre) {
@@ -29,24 +26,12 @@ public class Record implements WritableComparable<Record> {
     }
 
     public void addGenre(String genre){
-        genres.add(genre);
-        Text[] textArray = genres.stream()
-                .map(Text::new)
-                .toArray(Text[]::new);
-        genresArr = new ArrayWritable(Text.class, textArray);
+        this.genres.add(genre);
     }
 
-    public void merge(Record other) {
-        this.albumCount.set(this.albumCount.get() + other.albumCount.get());
-        for (Writable element : other.genresArr.get()) {
-            Text text = (Text) element;
-            String genre = text.toString();
-            this.genres.add(genre);
-        }
-        Text[] textArray = genres.stream()
-                .map(Text::new)
-                .toArray(Text[]::new);
-        genresArr = new ArrayWritable(Text.class, textArray);
+    public void merge(int albumCount, Set<String> genres) {
+        setAlbumCount(albumCount);
+        this.genres.addAll(genres);
     }
 
     @Override
@@ -57,17 +42,21 @@ public class Record implements WritableComparable<Record> {
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         albumCount.write(dataOutput);
-        genresArr.write(dataOutput);
+        Text.writeString(dataOutput, genres.toString());
     }
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
         albumCount.readFields(dataInput);
-        genresArr.readFields(dataInput);
+        String genreList = Text.readString(dataInput);
+        genreList = genreList.replaceAll("\\[|\\]", "");
+        genreList = genreList.replaceAll(",,", ",");
+        String[] genreArr = genreList.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+        this.genres = new HashSet<>(Arrays.asList(genreArr));
     }
 
     @Override
     public String toString() {
-        return albumCount.get() + " " + String.join(",", Arrays.asList(genresArr.toStrings()));
+        return albumCount.get() + ":" + String.join(",", genres);
     }
 }
