@@ -4,7 +4,6 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Objects;
 
 public class RecordsKey implements WritableComparable<RecordsKey> {
     private int labelId;
@@ -20,23 +19,6 @@ public class RecordsKey implements WritableComparable<RecordsKey> {
         this.artistName = artistName;
         this.decade = decade;
     }
-
-    public int getLabelId(){
-        return this.labelId;
-    }
-
-    public String getArtistName(){
-        return this.artistName;
-    }
-
-    public int getArtistId(){
-        return this.artistId;
-    }
-
-    public int getDecade(){
-        return this.decade;
-    }
-
     @Override
     public int compareTo(RecordsKey o) {
         if (this.labelId > o.labelId)
