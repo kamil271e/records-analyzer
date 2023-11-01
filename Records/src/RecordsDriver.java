@@ -19,8 +19,6 @@ import org.apache.log4j.Logger;
 
 public class RecordsDriver extends Configured implements Tool
 {
-    static String GENRE_SEPARATOR = "\u0001";
-
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
         int res = ToolRunner.run(new RecordsDriver(), args);
@@ -50,7 +48,6 @@ public class RecordsDriver extends Configured implements Tool
     }
 
     public static class RecordMapper extends Mapper<LongWritable, Text, RecordsKey, Record> {
-        Logger logger = Logger.getLogger(RecordsDriver.class);
         @Override
         public void map(LongWritable offset, Text line, Context context) {
             try {
@@ -63,16 +60,15 @@ public class RecordsDriver extends Configured implements Tool
                     String artist_name = columns[5];
                     int release_date = Integer.parseInt(columns[11]);
                     int decade = release_date / 10 * 10;
-                    String genre = columns[8];// + GENRE_SEPARATOR;
+                    String genre = columns[8];
 
                     RecordsKey key = new RecordsKey(label_id, artist_id, artist_name, decade);
-                    Record record = new Record(1, genre);
+                    Record record = new Record(1, genre.trim());
 
                     context.write(key, record);
                 }
             } catch (Exception e) {
-                logger.error("Error in Mapper:", e);
-//                 e.printStackTrace();
+                 e.printStackTrace();
             }
         }
     }
@@ -81,15 +77,10 @@ public class RecordsDriver extends Configured implements Tool
         @Override
         public void reduce(RecordsKey key, Iterable<Record> values, Context context) throws IOException, InterruptedException {
             Record resultRecord = new Record();
-            int albumCount = 0;
-            Set<String> genres = new HashSet<>();
-
             for (Record value : values) {
-                albumCount++;
-                genres.addAll(value.genres);
+                resultRecord.merge(value);
             }
-            resultRecord.merge(albumCount, genres);
             context.write(key, resultRecord);
-            }
         }
+    }
 }
