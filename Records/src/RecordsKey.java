@@ -50,6 +50,6 @@ public class RecordsKey implements WritableComparable<RecordsKey> {
 
     @Override
     public String toString() {
-        return this.labelId + "," + this.artistId + "," + this.artistName + "," + this.decade;
+        return this.labelId + "\t" + this.artistId + "\t" + this.artistName + "\t" + this.decade;
     }
 }
