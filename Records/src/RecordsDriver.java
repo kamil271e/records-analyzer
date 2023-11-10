@@ -50,11 +50,10 @@ public class RecordsDriver extends Configured implements Tool
     public static class RecordMapper extends Mapper<LongWritable, Text, RecordsKey, Record> {
         @Override
         public void map(LongWritable offset, Text line, Context context) {
+            String textLine = line.toString();
             try {
-                String textLine = new String(line.getBytes(), 0, line.getLength(), StandardCharsets.UTF_8);
-                // "\u0001"
-                String[] columns = textLine.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                if (columns.length == 13) {
+                String[] columns = textLine.split("\u0001");
+                if (columns.length == 12) {
                     int label_id = Integer.parseInt(columns[6]);
                     int artist_id = Integer.parseInt(columns[4]);
                     String artist_name = columns[5];

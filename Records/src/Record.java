@@ -67,6 +67,6 @@ public class Record implements WritableComparable<Record> {
 
     @Override
     public String toString() {
-        return albumCount.get() + "\t" + String.join(",", Arrays.asList(genresArr.toStrings()));
+        return albumCount.get() + "\t" + String.join(";", Arrays.asList(genresArr.toStrings()));
     }
 }
